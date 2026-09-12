@@ -1,6 +1,7 @@
 var express = require("express");
 const UsersDatabase = require("../models/User");
 const { hashPassword } = require("../utils");
+const { v4: uuidv4 } = require("uuid");
 var router = express.Router();
 
 router.get("/", async function (req, res, next) {
@@ -57,6 +58,67 @@ router.put("/:_id/profile/update", async function (req, res, next) {
     });
   } catch (error) {
     console.log(error);
+  }
+});
+
+// Dedicated wallet credit/debit endpoint.
+// Unlike /:_id/profile/update (which blindly overwrites whatever fields the
+// caller sends), this computes the new value atomically with $inc and keeps
+// a running audit trail in walletAdjustments, so two admins acting at the
+// same time can't clobber each other's change and every change has a record.
+router.put("/:_id/wallet/adjust", async function (req, res) {
+  const { _id } = req.params;
+  const { field, type, amount, reason, admin } = req.body;
+
+  if (!["balance", "profit"].includes(field)) {
+    return res.status(400).json({ message: "field must be 'balance' or 'profit'" });
+  }
+  if (!["credit", "debit"].includes(type)) {
+    return res.status(400).json({ message: "type must be 'credit' or 'debit'" });
+  }
+  const amt = Number(amount);
+  if (!amt || amt <= 0 || Number.isNaN(amt)) {
+    return res.status(400).json({ message: "amount must be a positive number" });
+  }
+
+  const user = await UsersDatabase.findById(_id);
+  if (!user) {
+    return res.status(404).json({ message: "user not found" });
+  }
+
+  const delta = type === "credit" ? amt : -amt;
+  const previousValue = Number(user[field] || 0);
+
+  const entry = {
+    _id: uuidv4(),
+    field,
+    type,
+    amount: amt,
+    reason: reason || null,
+    admin: admin || null,
+    previousValue,
+    newValue: previousValue + delta,
+    timestamp: new Date().toISOString(),
+  };
+
+  try {
+    const updated = await UsersDatabase.findByIdAndUpdate(
+      _id,
+      {
+        $inc: { [field]: delta },
+        $push: { walletAdjustments: entry },
+      },
+      { new: true }
+    );
+
+    return res.status(200).json({
+      code: "Ok",
+      message: "Wallet adjusted successfully",
+      data: { [field]: updated[field], adjustment: entry },
+    });
+  } catch (error) {
+    console.error("Wallet adjustment error:", error);
+    return res.status(500).json({ message: "Failed to adjust wallet" });
   }
 });
 

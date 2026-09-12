@@ -82,6 +82,10 @@ kycRejectionReason: { type: String },
   transactions: {
     type: Array,
   },
+  walletAdjustments: {
+    type: Array,
+    default: [],
+  },
   accounts: {
     type: Object,
   },
