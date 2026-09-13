@@ -18,6 +18,7 @@ const registerAuthRouter = require("./routes/auth/register");
 const forgotPasswordAuthRouter = require("./routes/auth/forgot-password");
 const kycAuthRouter = require("./routes/auth/kyc");
 const transactionsRouter = require("./routes/transactions");
+const settingsRouter = require("./routes/settings");
 
 // App Initialization
 const app = express();
@@ -40,6 +41,7 @@ app.use("/auth", forgotPasswordAuthRouter);
 app.use("/auth", kycAuthRouter);
 app.use("/auth/trader", traderAuthRouter);
 app.use("/transactions", transactionsRouter);
+app.use("/settings", settingsRouter);
 
 // MongoDB Connection
 mongoose.set('strictQuery', false);
