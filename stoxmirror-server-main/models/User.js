@@ -104,6 +104,10 @@ kycRejectionReason: { type: String },
   isDisabled: {
     type: Boolean,
   },
+  isAdmin: {
+    type: Boolean,
+    default: false,
+  },
 });
 
 module.exports = mongoose.model("users", UsersSchema);
