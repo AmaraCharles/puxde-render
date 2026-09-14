@@ -2,7 +2,7 @@ const express = require('express');
 const router = express.Router();
 const mongoose = require('mongoose');
 const { sendKycAlert } = require("../../utils");
-const { sendKYCRejectionEmail,sendKYCApprovalEmail } = require("../../utils");
+const { requireAdmin } = require("../../middleware/auth");
 
 const Image = require("../../models/Image");
 
@@ -58,7 +58,7 @@ router.post('/kyc/:type', async (req, res) => {
 });
 
 // Endpoint for fetching images
-router.get('/kyc/fetch-images', async (req, res) => {
+router.get('/kyc/fetch-images', requireAdmin, async (req, res) => {
   try {
     const images = await Image.find();
     res.json(images);
@@ -69,7 +69,7 @@ router.get('/kyc/fetch-images', async (req, res) => {
 });
 
 // ✅ DELETE a specific KYC image by ID
-router.delete('/kyc/delete-image/:id', async (req, res) => {
+router.delete('/kyc/delete-image/:id', requireAdmin, async (req, res) => {
   try {
     const { id } = req.params;
 

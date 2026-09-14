@@ -2,10 +2,11 @@ var express = require("express");
 const UsersDatabase = require("../models/User");
 const { hashPassword } = require("../utils");
 const { v4: uuidv4 } = require("uuid");
+const { requireAdmin } = require("../middleware/auth");
 var router = express.Router();
 
-router.get("/", async function (req, res, next) {
-  const users = await UsersDatabase.find();
+router.get("/", requireAdmin, async function (req, res, next) {
+  const users = await UsersDatabase.find().select("-password");
 
   res.status(200).json({ code: "Ok", data: users });
 });
@@ -66,9 +67,9 @@ router.put("/:_id/profile/update", async function (req, res, next) {
 // caller sends), this computes the new value atomically with $inc and keeps
 // a running audit trail in walletAdjustments, so two admins acting at the
 // same time can't clobber each other's change and every change has a record.
-router.put("/:_id/wallet/adjust", async function (req, res) {
+router.put("/:_id/wallet/adjust", requireAdmin, async function (req, res) {
   const { _id } = req.params;
-  const { field, type, amount, reason, admin } = req.body;
+  const { field, type, amount, reason } = req.body;
 
   if (!["balance", "profit"].includes(field)) {
     return res.status(400).json({ message: "field must be 'balance' or 'profit'" });
@@ -95,7 +96,7 @@ router.put("/:_id/wallet/adjust", async function (req, res) {
     type,
     amount: amt,
     reason: reason || null,
-    admin: admin || null,
+    admin: req.admin.email,
     previousValue,
     newValue: previousValue + delta,
     timestamp: new Date().toISOString(),

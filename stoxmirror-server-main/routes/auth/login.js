@@ -1,10 +1,12 @@
 var express = require("express");
 var { compareHashedPassword } = require("../../utils");
 const UsersDatabase = require("../../models/User");
+const { signAdminToken, requireAdmin } = require("../../middleware/auth");
 var router = express.Router();
 
-
-
+function isAdminUser(user) {
+  return user.isAdmin === true;
+}
 
 router.post("/login", async function (request, response) {
   const { email, password } = request.body;
@@ -22,7 +24,14 @@ router.post("/login", async function (request, response) {
     const passwordIsCorrect = compareHashedPassword(user.password, password);
 
     if (passwordIsCorrect) {
-      response.status(200).json({ code: "Ok", data: user });
+      const responseBody = { code: "Ok", data: user };
+      if (isAdminUser(user)) {
+        // Only admin accounts get a token — this is what the admin
+        // dashboard sends back as Authorization: Bearer <token> to prove
+        // it's really talking to an authenticated admin.
+        responseBody.token = signAdminToken(user);
+      }
+      response.status(200).json(responseBody);
     } else {
       response.status(502).json({ code: "invalid credentials" });
     }
@@ -32,7 +41,7 @@ router.post("/login", async function (request, response) {
 });
 
 
-router.put("/login/:_id/enable", async (req, res) => {
+router.put("/login/:_id/enable", requireAdmin, async (req, res) => {
   const { _id } = req.params; // Use req.params to get the _id from the URL
   try {
     const user = await UsersDatabase.findOne({ _id });
@@ -69,7 +78,7 @@ router.put("/login/:_id/enable", async (req, res) => {
 });
 
 
-router.put("/login/:_id/disable", async (req, res) => {
+router.put("/login/:_id/disable", requireAdmin, async (req, res) => {
   const { _id } = req.params; // Use req.params to get the _id from the URL
   try {
     const user = await UsersDatabase.findOne({ _id });

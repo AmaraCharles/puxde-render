@@ -1,5 +1,6 @@
 var express = require("express");
 const Settings = require("../models/Settings");
+const { requireAdmin } = require("../middleware/auth");
 var router = express.Router();
 
 // The addresses that used to be hardcoded in the frontend — used to seed
@@ -38,11 +39,23 @@ router.get("/wallets", async function (req, res) {
 
 // Admin: replace the whole set of deposit addresses.
 // Body: { wallets: { bitcoin: { label, address }, ethereum: {...}, ... } }
-router.put("/wallets", async function (req, res) {
+router.put("/wallets", requireAdmin, async function (req, res) {
   const { wallets } = req.body;
 
   if (!wallets || typeof wallets !== "object" || Array.isArray(wallets)) {
     return res.status(400).json({ message: "wallets must be an object keyed by coin" });
+  }
+
+  for (const [coin, entry] of Object.entries(wallets)) {
+    if (
+      !entry ||
+      typeof entry !== "object" ||
+      typeof entry.address !== "string" ||
+      !entry.address.trim() ||
+      typeof entry.label !== "string"
+    ) {
+      return res.status(400).json({ message: `Invalid entry for "${coin}": expected { label, address }` });
+    }
   }
 
   try {
@@ -50,6 +63,12 @@ router.put("/wallets", async function (req, res) {
       { key: "global" },
       { $set: { depositWallets: wallets } },
       { new: true, upsert: true }
+    );
+    // Minimal audit trail: this touches where users' real deposits go, so
+    // every change should be traceable to an admin + timestamp in the logs.
+    console.log(
+      `[settings.wallets] updated by ${req.admin.email} (userId=${req.admin.userId}) at ${new Date().toISOString()}:`,
+      wallets
     );
     res.status(200).json({ code: "Ok", data: settings.depositWallets });
   } catch (error) {

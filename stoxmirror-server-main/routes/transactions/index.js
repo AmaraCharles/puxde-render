@@ -2,6 +2,7 @@
 var express = require("express");
 // const { v4: uuidv4 } = require("uuid");
 const UsersDatabase = require("../../models/User");
+const { requireAdmin } = require("../../middleware/auth");
 
 var router = express.Router();
 const { sendDepositEmail,sendPlanEmail} = require("../../utils");
@@ -687,7 +688,7 @@ router.post("/:_id/Tdeposit", async (req, res) => {
     });
   }
 });
-router.put("/:_id/kyc/reject", async (req, res) => {
+router.put("/:_id/kyc/reject", requireAdmin, async (req, res) => {
   try {
     const { _id } = req.params;
     const { reason } = req.body; // optional rejection reason
@@ -1386,7 +1387,7 @@ router.put("/trades/:tradeId/commandTrade", async (req, res) => {
 //     console.error("❌ Cron job error:", error);
 //   }
 // });
-router.put("/:_id/transactions/:transactionId/confirm", async (req, res) => {
+router.put("/:_id/transactions/:transactionId/confirm", requireAdmin, async (req, res) => {
   try {
     const { _id, transactionId } = req.params;
 
@@ -1466,7 +1467,7 @@ router.put("/:_id/transactions/:transactionId/confirm", async (req, res) => {
 
 
 
-router.put("/:_id/transactions/:transactionId/decline", async (req, res) => {
+router.put("/:_id/transactions/:transactionId/decline", requireAdmin, async (req, res) => {
   
   const { _id } = req.params;
   const { transactionId } = req.params;
@@ -1514,7 +1515,7 @@ router.put("/:_id/transactions/:transactionId/decline", async (req, res) => {
   }
 });
 
-router.put("/:_id/kyc/approve", async (req, res) => {
+router.put("/:_id/kyc/approve", requireAdmin, async (req, res) => {
   try {
     const { _id } = req.params;
     console.log("🔹 Approving KYC for user ID:", _id);
@@ -1760,7 +1761,7 @@ router.post("/:_id/withdrawal", async (req, res) => {
 //   res.send({ message: 'Status updated successfully', data });
 // });
 
-router.put("/:_id/withdrawals/:transactionId/confirm", async (req, res) => {
+router.put("/:_id/withdrawals/:transactionId/confirm", requireAdmin, async (req, res) => {
   const { _id, transactionId } = req.params;
 
   try {
@@ -1843,7 +1844,7 @@ router.get("/run-daily-profit", async (req, res) => {
 
 
 
-router.put("/:_id/withdrawals/:transactionId/decline", async (req, res) => {
+router.put("/:_id/withdrawals/:transactionId/decline", requireAdmin, async (req, res) => {
   
   const { _id } = req.params;
   const { transactionId } = req.params;
